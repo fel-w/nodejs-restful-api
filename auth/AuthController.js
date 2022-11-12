@@ -39,7 +39,7 @@ router.get("/me", (req, res) => {
   if (!token)
     return res
       .status(401)
-      .send({ auth: false, message: "Not token provided." });
+      .send({ auth: false, message: "No token provided." });
 
   // Decode token to view original payload
   jwt.verify(token, process.env.SECRET, (err, decoded) => {
@@ -56,6 +56,26 @@ router.get("/me", (req, res) => {
       res.status(200).send(user);
     });
   });
+});
+
+// login user
+router.post('/login', (req, res) => {
+  User.findOne({ email: req.body.email }, (err, user) => {
+    if (err) return res.status(500).send('Error on the server');
+    if(!user) return res.status(404).send('No user found');
+
+    var passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
+    if(!passwordIsValid) return res.status(401).send({ auth: false, token: null});
+
+    var token = jwt.sign({ id: user._id}, process.env.SECRET, { expiresIn: 86400 });
+
+    res.status(200).send({ auth: true, token: token});
+  });
+});
+
+// logout user
+router.post('/logout', (req, res) => {
+  res.status(200).send({ auth: false, token: null });
 });
 
 module.exports = router;
